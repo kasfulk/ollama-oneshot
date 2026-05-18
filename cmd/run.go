@@ -8,6 +8,7 @@ import (
 	"github.com/kasjfulk/ollama-oneshot/internal/config"
 	"github.com/kasjfulk/ollama-oneshot/internal/docs"
 	"github.com/kasjfulk/ollama-oneshot/internal/enhancer"
+	"github.com/kasjfulk/ollama-oneshot/internal/ollama"
 	"github.com/kasjfulk/ollama-oneshot/internal/prompt"
 	"github.com/kasjfulk/ollama-oneshot/internal/runner"
 	"github.com/kasjfulk/ollama-oneshot/internal/tools"
@@ -116,6 +117,15 @@ func runExecute(cmd *cobra.Command, args []string) error {
 	tool, ok := tools.Get(cfg.DefaultTool)
 	if !ok {
 		return fmt.Errorf("unknown tool: %s (available: %s)", cfg.DefaultTool, strings.Join(tools.List(), ", "))
+	}
+
+	fmt.Println("> Validating model...")
+	client := ollama.NewClient(cfg.OllamaURL())
+	exists, err := client.ModelExists(cfg.OllamaModel)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not verify model availability (%v)\n", err)
+	} else if !exists {
+		return fmt.Errorf("model %q not found in Ollama instance — pull it first with: ollama pull %s", cfg.OllamaModel, cfg.OllamaModel)
 	}
 
 	fmt.Printf("> Launching %s...\n", tool.Name)

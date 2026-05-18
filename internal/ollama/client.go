@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,39 @@ func NewClient(baseURL string) *Client {
 			Timeout: 120 * time.Second,
 		},
 	}
+}
+
+func (c *Client) ModelExists(modelName string) (bool, error) {
+	tagsURL := c.tagsURL()
+	resp, err := c.HTTPClient.Get(tagsURL)
+	if err != nil {
+		return false, fmt.Errorf("ollama tags request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return false, fmt.Errorf("ollama tags returned %d: %s", resp.StatusCode, string(b))
+	}
+
+	var tags TagsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
+		return false, fmt.Errorf("decode tags response: %w", err)
+	}
+
+	for _, m := range tags.Models {
+		if m.Name == modelName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (c *Client) tagsURL() string {
+	host := c.BaseURL
+	host = strings.TrimSuffix(host, "/api/generate")
+	host = strings.TrimSuffix(host, "/")
+	return host + "/api/tags"
 }
 
 func (c *Client) Generate(req *GenerateRequest) (string, error) {

@@ -9,7 +9,12 @@ import (
 func (t Tool) LaunchCommand(model string) string {
 	cmd := t.Command + " --model " + model
 	if YoloMode() {
-		cmd += " --permission-mode bypassPermissions"
+		if len(t.YoloArgs) == 0 {
+			yoloLog.Printf("no yolo args for tool=%q — auto-approval may not take effect", t.Name)
+		}
+		for _, arg := range t.YoloArgs {
+			cmd += " " + arg
+		}
 		caller := callerContext()
 		LogYoloApproval(t.Name, caller)
 	}

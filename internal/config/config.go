@@ -21,10 +21,10 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	viper.SetDefault("OLLAMA_HOST", "127.0.0.1:11434")
-	viper.SetDefault("DEFAULT_MODEL", "kimi-k2.6:cloud")
+	viper.SetDefault("DEFAULT_MODEL", "glm-5.1:cloud")
 	viper.SetDefault("DEFAULT_TOOL", "claude")
 	viper.SetDefault("PROMPT_ENHANCEMENT", true)
-	viper.SetDefault("PROMPT_ENHANCEMENT_MODEL", "deepseek-v4-flash")
+	viper.SetDefault("PROMPT_ENHANCEMENT_MODEL", "deepseek-v4-flash:cloud")
 	viper.SetDefault("YOLO_MODE", false)
 
 	viper.AutomaticEnv()

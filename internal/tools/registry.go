@@ -9,19 +9,12 @@ import (
 )
 
 type Tool struct {
-	Name    string
-	Command string
+	Name     string
+	Command  string
+	YoloArgs []string
 }
 
-var registry = map[string]Tool{
-	"claude":      {Name: "claude", Command: "ollama launch claude"},
-	"claude-code": {Name: "claude-code", Command: "ollama launch claude"},
-	"codex":       {Name: "codex", Command: "ollama launch codex"},
-	"codex-app":   {Name: "codex-app", Command: "ollama launch codex-app"},
-	"opencode":    {Name: "opencode", Command: "ollama launch opencode"},
-	"openclaw":    {Name: "openclaw", Command: "ollama launch openclaw"},
-	"hermes":      {Name: "hermes", Command: "ollama launch hermes"},
-}
+var registry = map[string]Tool{}
 
 var (
 	yoloMode bool

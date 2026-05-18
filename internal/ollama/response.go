@@ -6,3 +6,11 @@ type StreamChunk struct {
 	Done      bool   `json:"done"`
 	CreatedAt string `json:"created_at,omitempty"`
 }
+
+type TagsResponse struct {
+	Models []ModelEntry `json:"models"`
+}
+
+type ModelEntry struct {
+	Name string `json:"name"`
+}
