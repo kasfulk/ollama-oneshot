@@ -21,6 +21,7 @@ var (
 	flagDocs      []string
 	flagDryRun    bool
 	flagNoEnhance bool
+	flagYoloMode  bool
 	flagSystem    string
 	flagProfile   string
 	flagInclude   string
@@ -30,7 +31,7 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Execute an AI agent with enhanced prompt and project context",
 	Long:  `Run orchestrates prompt enhancement, documentation injection, and agent launching in a single pipeline.`,
-	RunE: runExecute,
+	RunE:  runExecute,
 }
 
 func init() {
@@ -42,6 +43,7 @@ func init() {
 	runCmd.Flags().StringSliceVar(&flagDocs, "docs", []string{}, "Documentation files to inject (comma-separated)")
 	runCmd.Flags().BoolVar(&flagDryRun, "dry-run", false, "Preview final prompt without execution")
 	runCmd.Flags().BoolVar(&flagNoEnhance, "no-enhance", false, "Skip prompt enhancement")
+	runCmd.Flags().BoolVar(&flagYoloMode, "yolo-mode", false, "Auto-approve all tool permission prompts (bypassPermissions)")
 	runCmd.Flags().StringVar(&flagSystem, "system", "", "Custom system prompt override")
 	runCmd.Flags().StringVar(&flagProfile, "profile", "", "Load YAML profile preset")
 	runCmd.Flags().StringVar(&flagInclude, "include", "", "Glob pattern for source files to include")
@@ -54,7 +56,11 @@ func runExecute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
-	cfg.ApplyFlags(flagModel, flagTool, flagNoEnhance)
+	cfg.ApplyFlags(flagModel, flagTool, flagNoEnhance, flagYoloMode)
+
+	if cfg.YoloMode {
+		tools.SetYoloMode(true)
+	}
 
 	fmt.Println("> Loading configuration...")
 

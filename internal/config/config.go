@@ -14,6 +14,7 @@ type Config struct {
 	DefaultTool            string
 	PromptEnhancement      bool
 	PromptEnhancementModel string
+	YoloMode               bool
 }
 
 func Load() (*Config, error) {
@@ -24,6 +25,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("DEFAULT_TOOL", "claude")
 	viper.SetDefault("PROMPT_ENHANCEMENT", true)
 	viper.SetDefault("PROMPT_ENHANCEMENT_MODEL", "deepseek-v4-flash")
+	viper.SetDefault("YOLO_MODE", false)
 
 	viper.AutomaticEnv()
 	viper.BindEnv("OLLAMA_HOST")
@@ -31,6 +33,7 @@ func Load() (*Config, error) {
 	viper.BindEnv("DEFAULT_TOOL")
 	viper.BindEnv("PROMPT_ENHANCEMENT")
 	viper.BindEnv("PROMPT_ENHANCEMENT_MODEL")
+	viper.BindEnv("YOLO_MODE")
 
 	cfg := &Config{
 		OllamaHost:             viper.GetString("OLLAMA_HOST"),
@@ -38,6 +41,7 @@ func Load() (*Config, error) {
 		DefaultTool:            viper.GetString("DEFAULT_TOOL"),
 		PromptEnhancement:      viper.GetBool("PROMPT_ENHANCEMENT"),
 		PromptEnhancementModel: viper.GetString("PROMPT_ENHANCEMENT_MODEL"),
+		YoloMode:               viper.GetBool("YOLO_MODE"),
 	}
 
 	if cfg.OllamaHost == "" {
@@ -47,7 +51,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) ApplyFlags(model, tool string, noEnhance bool) {
+func (c *Config) ApplyFlags(model, tool string, noEnhance, yoloMode bool) {
 	if model != "" {
 		c.OllamaModel = model
 	}
@@ -56,6 +60,9 @@ func (c *Config) ApplyFlags(model, tool string, noEnhance bool) {
 	}
 	if noEnhance {
 		c.PromptEnhancement = false
+	}
+	if yoloMode {
+		c.YoloMode = true
 	}
 }
 
