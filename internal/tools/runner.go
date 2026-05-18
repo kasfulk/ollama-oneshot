@@ -8,26 +8,39 @@ import (
 
 func (t Tool) LaunchCommand(model string) string {
 	cmd := t.Command + " --model " + model
+
+	var subArgs []string
+
 	if YoloMode() {
 		if len(t.YoloArgs) == 0 {
 			yoloLog.Printf("no yolo args for tool=%q — auto-approval may not take effect", t.Name)
 		}
 		for _, arg := range t.YoloArgs {
-			cmd += " " + arg
+			if arg != "--" {
+				subArgs = append(subArgs, arg)
+			}
 		}
 		caller := callerContext()
 		LogYoloApproval(t.Name, caller)
 	}
+
 	if AutoExitMode() {
 		if len(t.AutoExitArgs) == 0 {
 			autoExitLog.Printf("no auto-exit args for tool=%q — auto-exit may not take effect", t.Name)
 		}
 		for _, arg := range t.AutoExitArgs {
-			cmd += " " + arg
+			if arg != "--" {
+				subArgs = append(subArgs, arg)
+			}
 		}
 		caller := callerContext()
 		LogAutoExitActivation(t.Name, caller)
 	}
+
+	if len(subArgs) > 0 {
+		cmd += " -- " + strings.Join(subArgs, " ")
+	}
+
 	return cmd
 }
 

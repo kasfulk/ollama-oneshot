@@ -20,7 +20,7 @@ func NewClient(baseURL string) *Client {
 	return &Client{
 		BaseURL: baseURL,
 		HTTPClient: &http.Client{
-			Timeout: 120 * time.Second,
+			Timeout: 5 * time.Minute,
 		},
 	}
 }
@@ -49,6 +49,10 @@ func (c *Client) ModelExists(modelName string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func IsCloudModel(modelName string) bool {
+	return strings.HasSuffix(modelName, ":cloud")
 }
 
 func (c *Client) tagsURL() string {

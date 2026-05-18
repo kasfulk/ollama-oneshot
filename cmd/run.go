@@ -135,17 +135,21 @@ func runExecute(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("> Validating model...")
-	client := ollama.NewClient(cfg.OllamaURL())
-	exists, err := client.ModelExists(cfg.OllamaModel)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not verify model availability (%v)\n", err)
-	} else if !exists {
-		err := fmt.Errorf("model %q not found in Ollama instance — pull it first with: ollama pull %s", cfg.OllamaModel, cfg.OllamaModel)
-		if cfg.AutoExit {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+	if ollama.IsCloudModel(cfg.OllamaModel) {
+		fmt.Printf("> Skipping local validation for cloud model %s\n", cfg.OllamaModel)
+	} else {
+		client := ollama.NewClient(cfg.OllamaURL())
+		exists, err := client.ModelExists(cfg.OllamaModel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not verify model availability (%v)\n", err)
+		} else if !exists {
+			err := fmt.Errorf("model %q not found in Ollama instance — pull it first with: ollama pull %s", cfg.OllamaModel, cfg.OllamaModel)
+			if cfg.AutoExit {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			return err
 		}
-		return err
 	}
 
 	fmt.Printf("> Launching %s...\n", tool.Name)
