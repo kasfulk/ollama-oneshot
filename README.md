@@ -1,27 +1,32 @@
 # ollama-oneshot
 
-CLI orchestration layer for `ollama launch` — prompt enhancement, documentation injection, and AI agent launching in a single pipeline.
+CLI orchestration layer for `ollama launch` — prompt enhancement, documentation injection, model validation, and AI agent launching in a single pipeline.
 
 ## What it does
 
 ```
 User Prompt
     ↓
-Prompt Enhancement  (Ollama → deepseek-v4-flash)
+Prompt Enhancement  (Ollama → deepseek-v4-flash:cloud)
     ↓
 Documentation Injection  (AGENT.md, PRD.md, DATABASE.md, …)
+    ↓
+Model Validation  (checks model exists in Ollama)
     ↓
 Prompt Assembly  [SYSTEM + DOCS + ENHANCED + USER]
     ↓
 ollama launch <tool> --model <model>
     ↓
 Agent output streams to terminal
+    ↓
+Auto-Exit (optional) — exit or timeout after completion
 ```
 
 ## Requirements
 
 - [Go 1.21+](https://go.dev/dl/)
 - [Ollama](https://ollama.com) running locally
+- Target model pulled in Ollama (e.g., `ollama pull glm-5.1:cloud`)
 
 ## Install
 
@@ -46,14 +51,17 @@ Copy or edit `.env` in the project root:
 ```bash
 OLLAMA_HOST=127.0.0.1:11434
 
-DEFAULT_MODEL=kimi-k2.6:cloud
+DEFAULT_MODEL=glm-5.1:cloud
 DEFAULT_TOOL=claude
 
 PROMPT_ENHANCEMENT=true
-PROMPT_ENHANCEMENT_MODEL=deepseek-v4-flash
+PROMPT_ENHANCEMENT_MODEL=deepseek-v4-flash:cloud
+
+YOLO_MODE=false
+AUTO_EXIT=false
 ```
 
-Config priority: **CLI flags → environment variables → defaults**
+Config priority: **CLI flags → environment variables → `.env` → defaults**
 
 ## Usage
 
@@ -69,7 +77,7 @@ ollama-oneshot run --prompt "build ERP application"
 ollama-oneshot run \
   --prompt "build currency exchange app" \
   --tool claude \
-  --model kimi-k2.6:cloud \
+  --model glm-5.1:cloud \
   --docs AGENT.md,PRD.md
 ```
 
@@ -97,31 +105,70 @@ ollama-oneshot run \
   --include "internal/**/*.go"
 ```
 
+### YOLO mode — auto-approve tool permission prompts
+
+```bash
+ollama-oneshot run \
+  --prompt "build a full-stack app" \
+  --yolo-mode
+```
+
+When enabled, the tool appends per-approval flags:
+
+| Tool          | YOLO argument                           |
+| ------------- | --------------------------------------- |
+| `claude`      | `--dangerously-skip-permissions`        |
+| `codex`       | `--full-auto`                           |
+| `opencode`    | _(none — no built-in auto-approve)_     |
+
+### Auto-exit — automatically exit after task completion
+
+```bash
+ollama-oneshot run \
+  --prompt "refactor this module" \
+  --auto-exit
+```
+
+- Automatically exits `ollama launch` after the task completes.
+- Uses a 30-minute timeout to prevent hanging processes.
+- On timeout, exits with code **124**.
+- When combined with `--yolo-mode`, enables fully unattended operation.
+
+Each tool appends a per-tool auto-exit argument (`-p` for claude, `exec` for codex, `run` for opencode).
+
 ## Flags
 
 | Flag           | Type       | Default            | Description                            |
 | -------------- | ---------- | ------------------ | -------------------------------------- |
 | `--prompt`     | string     | **required**       | The task or request                    |
 | `--tool`       | string     | `claude`           | Agent tool to launch                   |
-| `--model`      | string     | `kimi-k2.6:cloud`  | Execution model                        |
+| `--model`      | string     | `glm-5.1:cloud`    | Execution model                        |
 | `--docs`       | []string   | auto-discover      | Docs to inject (comma-separated)       |
 | `--include`    | string     | —                  | Glob pattern for source files          |
 | `--dry-run`    | bool       | false              | Preview final prompt, skip execution   |
 | `--no-enhance` | bool       | false              | Skip prompt enhancement                |
+| `--yolo-mode`  | bool       | false              | Auto-approve tool permission prompts   |
+| `--auto-exit`  | bool       | false              | Exit after task completion             |
 | `--system`     | string     | default template   | Override system prompt                 |
 | `--profile`    | string     | —                  | Load a YAML profile preset             |
 
 ## Supported Tools
 
-| Tool          | Launch Command              |
-| ------------- | --------------------------- |
-| `claude`      | `ollama launch claude`      |
-| `claude-code` | `ollama launch claude`      |
-| `codex`       | `ollama launch codex`       |
-| `codex-app`   | `ollama launch codex-app`   |
-| `opencode`    | `ollama launch opencode`    |
-| `openclaw`    | `ollama launch openclaw`    |
-| `hermes`      | `ollama launch hermes`      |
+| Tool          | Launch Command              | YOLO args                          | Auto-exit args |
+| ------------- | --------------------------- | ---------------------------------- | -------------- |
+| `claude`      | `ollama launch claude`      | `--dangerously-skip-permissions`   | `-p`           |
+| `claude-code` | `ollama launch claude`      | `--dangerously-skip-permissions`   | `-p`           |
+| `codex`       | `ollama launch codex`       | `--full-auto`                      | `exec`         |
+| `codex-app`   | `ollama launch codex-app`   | `--full-auto`                      | `exec`         |
+| `opencode`    | `ollama launch opencode`    | —                                  | `run`          |
+| `openclaw`    | `ollama launch openclaw`    | —                                  | `run`          |
+| `hermes`      | `ollama launch hermes`      | —                                  | `run`          |
+
+## Model Validation
+
+Before launching a tool, `ollama-oneshot` checks that the specified model exists in your local Ollama instance using the `/api/tags` endpoint. If the model is not found, execution is aborted with a message indicating the required `ollama pull` command.
+
+This check can be disabled implicitly — validation warnings do not block execution.
 
 ## Documentation Auto-Discovery
 
@@ -160,8 +207,9 @@ make help       # list all targets
 > Prompt enhanced
 > Loading documentation...
 > Assembling context...
+> Validating model...
 > Launching claude...
-> Using model kimi-k2.6:cloud
+> Using model glm-5.1:cloud
 
 [agent output streams here...]
 
