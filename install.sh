@@ -35,6 +35,8 @@ install_binary() {
 
     if [ -f "$INSTALL_DIR/$BINARY" ]; then
         warn "Existing installation found at $INSTALL_DIR/$BINARY — overwriting"
+        # remove installed binary
+        rm -f "$INSTALL_DIR/$BINARY"
     fi
 
     mv "$REPO_ROOT/$BINARY" "$INSTALL_DIR/$BINARY"

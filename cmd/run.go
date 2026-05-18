@@ -23,6 +23,7 @@ var (
 	flagDryRun    bool
 	flagNoEnhance bool
 	flagYoloMode  bool
+	flagAutoExit  bool
 	flagSystem    string
 	flagProfile   string
 	flagInclude   string
@@ -45,6 +46,7 @@ func init() {
 	runCmd.Flags().BoolVar(&flagDryRun, "dry-run", false, "Preview final prompt without execution")
 	runCmd.Flags().BoolVar(&flagNoEnhance, "no-enhance", false, "Skip prompt enhancement")
 	runCmd.Flags().BoolVar(&flagYoloMode, "yolo-mode", false, "Auto-approve all tool permission prompts (bypassPermissions)")
+	runCmd.Flags().BoolVar(&flagAutoExit, "auto-exit", false, "Automatically exit after task completion")
 	runCmd.Flags().StringVar(&flagSystem, "system", "", "Custom system prompt override")
 	runCmd.Flags().StringVar(&flagProfile, "profile", "", "Load YAML profile preset")
 	runCmd.Flags().StringVar(&flagInclude, "include", "", "Glob pattern for source files to include")
@@ -55,12 +57,19 @@ func init() {
 func runExecute(cmd *cobra.Command, args []string) error {
 	cfg, err := config.Load()
 	if err != nil {
+		if flagAutoExit {
+			fmt.Fprintf(os.Stderr, "Error: config error: %v\n", err)
+			os.Exit(1)
+		}
 		return fmt.Errorf("config error: %w", err)
 	}
-	cfg.ApplyFlags(flagModel, flagTool, flagNoEnhance, flagYoloMode)
+	cfg.ApplyFlags(flagModel, flagTool, flagNoEnhance, flagYoloMode, flagAutoExit)
 
 	if cfg.YoloMode {
 		tools.SetYoloMode(true)
+	}
+	if cfg.AutoExit {
+		tools.SetAutoExitMode(true)
 	}
 
 	fmt.Println("> Loading configuration...")
@@ -75,6 +84,7 @@ func runExecute(cmd *cobra.Command, args []string) error {
 			enhancedPrompt = flagPrompt
 		} else {
 			fmt.Println("> Prompt enhanced")
+			fmt.Println(enhancedPrompt)
 		}
 	} else {
 		enhancedPrompt = flagPrompt
@@ -116,7 +126,12 @@ func runExecute(cmd *cobra.Command, args []string) error {
 
 	tool, ok := tools.Get(cfg.DefaultTool)
 	if !ok {
-		return fmt.Errorf("unknown tool: %s (available: %s)", cfg.DefaultTool, strings.Join(tools.List(), ", "))
+		err := fmt.Errorf("unknown tool: %s (available: %s)", cfg.DefaultTool, strings.Join(tools.List(), ", "))
+		if cfg.AutoExit {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return err
 	}
 
 	fmt.Println("> Validating model...")
@@ -125,12 +140,27 @@ func runExecute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not verify model availability (%v)\n", err)
 	} else if !exists {
-		return fmt.Errorf("model %q not found in Ollama instance — pull it first with: ollama pull %s", cfg.OllamaModel, cfg.OllamaModel)
+		err := fmt.Errorf("model %q not found in Ollama instance — pull it first with: ollama pull %s", cfg.OllamaModel, cfg.OllamaModel)
+		if cfg.AutoExit {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return err
 	}
 
 	fmt.Printf("> Launching %s...\n", tool.Name)
 	fmt.Printf("> Using model %s\n", cfg.OllamaModel)
 
 	execRunner := runner.New(tool, cfg.OllamaModel, finalPrompt)
-	return execRunner.Execute()
+	execRunner.SetAutoExit(cfg.AutoExit)
+
+	err = execRunner.Execute()
+	if cfg.AutoExit {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(execRunner.ExitCode())
+		}
+		os.Exit(0)
+	}
+	return err
 }

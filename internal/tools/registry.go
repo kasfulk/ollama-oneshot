@@ -9,17 +9,21 @@ import (
 )
 
 type Tool struct {
-	Name     string
-	Command  string
-	YoloArgs []string
+	Name         string
+	Command      string
+	YoloArgs     []string
+	AutoExitArgs []string
 }
 
 var registry = map[string]Tool{}
 
 var (
-	yoloMode bool
-	yoloMu   sync.RWMutex
-	yoloLog  = log.New(os.Stderr, "[YOLO] ", log.Lmsgprefix)
+	yoloMode    bool
+	yoloMu      sync.RWMutex
+	yoloLog     = log.New(os.Stderr, "[YOLO] ", log.Lmsgprefix)
+	autoExit    bool
+	autoExitMu  sync.RWMutex
+	autoExitLog = log.New(os.Stderr, "[AUTO-EXIT] ", log.Lmsgprefix)
 )
 
 func SetYoloMode(enabled bool) {
@@ -35,6 +39,21 @@ func YoloMode() bool {
 	yoloMu.RLock()
 	defer yoloMu.RUnlock()
 	return yoloMode
+}
+
+func SetAutoExitMode(enabled bool) {
+	autoExitMu.Lock()
+	defer autoExitMu.Unlock()
+	autoExit = enabled
+	if enabled {
+		autoExitLog.Printf("mode enabled at %s", time.Now().Format(time.RFC3339))
+	}
+}
+
+func AutoExitMode() bool {
+	autoExitMu.RLock()
+	defer autoExitMu.RUnlock()
+	return autoExit
 }
 
 func Get(name string) (Tool, bool) {
@@ -53,4 +72,18 @@ func List() []string {
 
 func LogYoloApproval(toolName, callerContext string) {
 	yoloLog.Printf("auto-approved tool=%q caller=%q at=%s", toolName, callerContext, time.Now().Format(time.RFC3339))
+}
+
+func LogAutoExitActivation(toolName, callerContext string) {
+	autoExitLog.Printf("activated for tool=%q caller=%q at=%s", toolName, callerContext, time.Now().Format(time.RFC3339))
+}
+
+func ResetGlobals() {
+	yoloMu.Lock()
+	yoloMode = false
+	yoloMu.Unlock()
+
+	autoExitMu.Lock()
+	autoExit = false
+	autoExitMu.Unlock()
 }

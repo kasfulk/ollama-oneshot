@@ -15,6 +15,7 @@ type Config struct {
 	PromptEnhancement      bool
 	PromptEnhancementModel string
 	YoloMode               bool
+	AutoExit               bool
 }
 
 func Load() (*Config, error) {
@@ -26,6 +27,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("PROMPT_ENHANCEMENT", true)
 	viper.SetDefault("PROMPT_ENHANCEMENT_MODEL", "deepseek-v4-flash:cloud")
 	viper.SetDefault("YOLO_MODE", false)
+	viper.SetDefault("AUTO_EXIT", false)
 
 	viper.AutomaticEnv()
 	viper.BindEnv("OLLAMA_HOST")
@@ -34,6 +36,7 @@ func Load() (*Config, error) {
 	viper.BindEnv("PROMPT_ENHANCEMENT")
 	viper.BindEnv("PROMPT_ENHANCEMENT_MODEL")
 	viper.BindEnv("YOLO_MODE")
+	viper.BindEnv("AUTO_EXIT")
 
 	cfg := &Config{
 		OllamaHost:             viper.GetString("OLLAMA_HOST"),
@@ -42,6 +45,7 @@ func Load() (*Config, error) {
 		PromptEnhancement:      viper.GetBool("PROMPT_ENHANCEMENT"),
 		PromptEnhancementModel: viper.GetString("PROMPT_ENHANCEMENT_MODEL"),
 		YoloMode:               viper.GetBool("YOLO_MODE"),
+		AutoExit:               viper.GetBool("AUTO_EXIT"),
 	}
 
 	if cfg.OllamaHost == "" {
@@ -51,7 +55,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) ApplyFlags(model, tool string, noEnhance, yoloMode bool) {
+func (c *Config) ApplyFlags(model, tool string, noEnhance, yoloMode, autoExit bool) {
 	if model != "" {
 		c.OllamaModel = model
 	}
@@ -63,6 +67,9 @@ func (c *Config) ApplyFlags(model, tool string, noEnhance, yoloMode bool) {
 	}
 	if yoloMode {
 		c.YoloMode = true
+	}
+	if autoExit {
+		c.AutoExit = true
 	}
 }
 
