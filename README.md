@@ -33,7 +33,7 @@ Auto-Exit (optional) — exit or timeout after completion
 ```bash
 git clone https://github.com/kasjfulk/ollama-oneshot
 cd ollama-oneshot
-bash install.sh
+./bash install.sh
 ```
 
 Or with Make:
